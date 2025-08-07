@@ -96,7 +96,7 @@ export function generatePrintablePages(settings: PrintableSettings): PrintablePa
 export function getDefaultPrintableSettings(): PrintableSettings {
   return {
     operationType: 'multiplication',
-    problemsPerPage: 70,
+    problemsPerPage: 72,
     pageCount: 1,
     numberRange: { min: 1, max: 9 },
     title: '数学练习题',

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,6 +14,7 @@ export default function PrintableWorksheet() {
   const [settings, setSettings] = useState<PrintableSettings>(getDefaultPrintableSettings())
   const [pages, setPages] = useState<PrintablePage[]>([])
   const [showPreview, setShowPreview] = useState(false)
+  const printableRef = useRef<HTMLDivElement>(null)
 
   const handleGenerate = () => {
     const generatedPages = generatePrintablePages(settings)
@@ -23,6 +24,53 @@ export default function PrintableWorksheet() {
 
   const handlePrint = () => {
     window.print()
+  }
+
+  const handleDownloadPDF = async () => {
+    if (!printableRef.current) return;
+
+    try {
+      // 动态导入库以避免SSR问题
+      const html2canvas = (await import('html2canvas')).default;
+      const jsPDF = (await import('jspdf')).default;
+
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageElements = printableRef.current.querySelectorAll('.printable-page');
+      
+      for (let i = 0; i < pageElements.length; i++) {
+        const pageElement = pageElements[i] as HTMLElement;
+        
+        // 为每个页面单独生成canvas
+        const canvas = await html2canvas(pageElement, {
+          scale: 3,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#ffffff',
+          width: pageElement.scrollWidth,
+          height: pageElement.scrollHeight
+        });
+        
+        const imgData = canvas.toDataURL('image/png');
+        
+        // 如果不是第一页，添加新页面
+        if (i > 0) {
+          pdf.addPage();
+        }
+        
+        // 计算图片在PDF中的尺寸，确保完整显示
+        const imgWidth = 210; // A4宽度
+        const imgHeight = 297; // A4高度
+        
+        // 添加图片到PDF页面
+        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+      }
+
+      // 下载PDF
+      pdf.save(`${settings.title || '数学练习题'}.pdf`);
+    } catch (error) {
+      console.error('生成PDF时出错:', error);
+      alert('生成PDF失败，请重试');
+    }
   }
 
   const updateSettings = (key: keyof PrintableSettings, value: any) => {
@@ -50,14 +98,18 @@ export default function PrintableWorksheet() {
           <Button onClick={() => setShowPreview(false)} variant="outline">
             ← 返回设置
           </Button>
-          <Button onClick={handlePrint} className="flex items-center gap-2">
+          <Button onClick={handlePrint} className="flex items-center gap-2" variant="outline">
             <Printer className="w-4 h-4" />
-            打印
+            浏览器打印
+          </Button>
+          <Button onClick={handleDownloadPDF} className="flex items-center gap-2">
+            <Download className="w-4 h-4" />
+            下载PDF
           </Button>
         </div>
 
         {/* 可打印内容 */}
-        <div className="print-content">
+        <div className="print-content" ref={printableRef}>
           {pages.map((page, pageIndex) => (
             <div key={pageIndex} className="page-break">
               <div className="printable-page">
@@ -93,107 +145,158 @@ export default function PrintableWorksheet() {
 
         {/* 打印样式 */}
         <style jsx global>{`
+          /* PDF专用样式 */
+          .printable-content {
+            background: white;
+            color: black;
+            font-family: 'SimSun', serif;
+          }
+
+          .print-page {
+            width: 210mm;
+            min-height: 297mm;
+            margin: 0 auto 20px;
+            padding: 20mm;
+            background: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            page-break-after: always;
+          }
+
+          .print-page:last-child {
+            page-break-after: avoid;
+          }
+
+          .page-header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+          }
+
+          .page-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 5px;
+          }
+
+          .page-subtitle {
+            font-size: 12px;
+            color: #666;
+          }
+
+          .student-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            font-size: 12px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+          }
+
+          .problems-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0;
+            margin-bottom: 0;
+            flex: 1;
+            align-content: space-evenly;
+          }
+
+          .problem-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 16px;
+            line-height: 2.0;
+            padding: 10px 6px;
+            border: none;
+            border-radius: 0;
+            min-height: auto;
+          }
+
+          .page-footer {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 10px;
+            color: #999;
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
+          }
+
           @media print {
-            @page {
-              margin: 15mm;
-              size: A4;
-            }
-            
-            /* 隐藏不需要的元素 */
+            /* 隐藏非打印元素 */
             .print\\:hidden,
-            nav, header, footer, aside,
-            button, .no-print {
+            nav,
+            header,
+            footer,
+            .no-print,
+            button,
+            .sidebar {
               display: none !important;
             }
-            
+
             /* 确保打印内容可见 */
-            .printable-content {
-              display: block !important;
-              position: static !important;
-              width: 100% !important;
-              height: auto !important;
-              background: white !important;
-              margin: 0 !important;
-              padding: 0 !important;
-              visibility: visible !important;
-            }
-            
+            .printable-content,
             .printable-content * {
               visibility: visible !important;
             }
-            
+
+            /* 页面设置 */
+            @page {
+              margin: 10mm;
+              size: A4;
+            }
+
+            body {
+              margin: 0;
+              padding: 0;
+              background: white !important;
+              color: black !important;
+            }
+
             .print-page {
               width: 100% !important;
-              min-height: auto !important;
-              padding: 0 !important;
+              height: 297mm !important;
               margin: 0 !important;
-              box-sizing: border-box !important;
-              page-break-after: always !important;
-              background: white !important;
+              padding: 15mm !important;
               box-shadow: none !important;
-              display: block !important;
-            }
-            
-            .print-page:last-child {
-              page-break-after: auto !important;
-            }
-            
-            .page-header {
-              margin-bottom: 20px !important;
-              border-bottom: 2px solid #000 !important;
-              padding-bottom: 10px !important;
-              display: block !important;
-            }
-            
-            .page-title {
-              font-size: 18pt !important;
-              font-weight: bold !important;
-              text-align: center !important;
-              margin-bottom: 10px !important;
-              color: #000 !important;
-              display: block !important;
-            }
-            
-            .student-info {
+              page-break-after: always !important;
+              page-break-inside: avoid !important;
               display: flex !important;
-              justify-content: space-between !important;
-              margin-bottom: 20px !important;
-              font-size: 12pt !important;
-              color: #000 !important;
+              flex-direction: column !important;
+              overflow: hidden !important;
             }
-            
+
+            .printable-page {
+              page-break-after: always !important;
+              page-break-inside: avoid !important;
+            }
+
+            .page-header {
+              page-break-after: avoid !important;
+              page-break-inside: avoid !important;
+            }
+
             .problems-grid {
-              display: grid !important;
               grid-template-columns: repeat(4, 1fr) !important;
-              gap: 8px 5px !important;
-              margin-bottom: 20px !important;
+              gap: 0 !important;
+              flex: 1 !important;
+              align-content: space-evenly !important;
+              margin-bottom: 0 !important;
             }
-            
+
             .problem-item {
-              display: block !important;
-              font-size: 12pt !important;
-              line-height: 1.5 !important;
-              color: #000 !important;
-              text-align: left !important;
-            }
-            
-            .problem-text {
-              font-weight: normal !important;
-              color: #000 !important;
-              display: inline !important;
-            }
-            
-            .page-footer {
-              text-align: center !important;
-              font-size: 10pt !important;
-              color: #000 !important;
-              margin-top: 20px !important;
-              display: block !important;
+              font-size: 16px !important;
+              padding: 10px 6px !important;
+              border: none !important;
+              line-height: 2.0 !important;
+              min-height: auto !important;
             }
           }
 
           .page-break {
             page-break-after: always;
+            page-break-inside: avoid;
           }
 
           .page-break:last-child {
@@ -202,54 +305,47 @@ export default function PrintableWorksheet() {
 
           .printable-page {
             width: 210mm;
-            min-height: 297mm;
+            height: 297mm;
             margin: 0 auto;
-            padding: 20mm;
+            padding: 15mm;
             background: white;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
             margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            page-break-inside: avoid;
           }
 
           .page-header {
-            margin-bottom: 30px;
-            border-bottom: 2px solid #333;
-            padding-bottom: 15px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 5px;
+            flex-shrink: 0;
           }
 
           .page-title {
-            font-size: 24px;
+            font-size: 22px;
             font-weight: bold;
             text-align: center;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
             color: #333;
           }
 
           .page-info {
             display: flex;
             justify-content: space-between;
-            font-size: 14px;
+            font-size: 13px;
             color: #666;
+            margin-bottom: 5px;
           }
 
-          .problems-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 10px 15px;
-            margin-bottom: 30px;
-          }
 
-          .problem-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 16px;
-            line-height: 1.5;
-          }
 
           .problem-number {
             font-weight: bold;
             color: #666;
-            min-width: 25px;
+            min-width: 28px;
           }
 
           .problem-text {
@@ -266,11 +362,14 @@ export default function PrintableWorksheet() {
 
           .page-footer {
             text-align: center;
-            font-size: 12px;
+            font-size: 13px;
             color: #666;
             border-top: 1px solid #ddd;
             padding-top: 10px;
             margin-top: auto;
+            flex-shrink: 0;
+            page-break-inside: avoid;
+            font-weight: 500;
           }
         `}</style>
       </div>
@@ -342,9 +441,9 @@ export default function PrintableWorksheet() {
               id="problems-per-page"
               type="number"
               value={settings.problemsPerPage}
-              onChange={(e) => updateSettings('problemsPerPage', parseInt(e.target.value) || 70)}
-              min="10"
-              max="100"
+              onChange={(e) => updateSettings('problemsPerPage', parseInt(e.target.value) || 72)}
+              min="20"
+              max="120"
             />
           </div>
           <div className="space-y-2">
