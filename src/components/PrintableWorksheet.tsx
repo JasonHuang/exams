@@ -6,14 +6,268 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { PrintableSettings, PrintablePage } from '@/types/printable'
+import { Checkbox } from '@/components/ui/checkbox'
+import { PrintableSettings, PrintablePage, PresetTemplate, Grade, GradeInfo } from '@/types/printable'
 import { generatePrintablePages, getDefaultPrintableSettings } from '@/lib/printableGenerator'
-import { Printer, Download, Eye } from 'lucide-react'
+import { Download, Eye } from 'lucide-react'
+
+// 预设模板定义
+// 年级信息
+const gradeOptions: GradeInfo[] = [
+  { value: 'grade1', label: '一年级', description: '10-20以内加减法基础' },
+  { value: 'grade2', label: '二年级', description: '100以内加减法、乘法口诀' },
+  { value: 'grade3', label: '三年级', description: '多位数运算、四则运算完成' },
+  { value: 'grade4', label: '四年级', description: '大数运算、小数认识' },
+  { value: 'grade5', label: '五年级', description: '小数运算、分数基础' },
+  { value: 'grade6', label: '六年级', description: '分数运算、百分数、综合应用' }
+]
+
+// 按年级分类的预设模板
+const presetTemplates: PresetTemplate[] = [
+  // 一年级模板
+  {
+    id: 'grade1-add-10',
+    name: '10以内加法练习',
+    grade: 'grade1',
+    operationTypes: ['addition'],
+    numberRange: { min: 1, max: 10 },
+    problemsPerPage: 60,
+    title: '一年级10以内加法练习'
+  },
+  {
+    id: 'grade1-sub-10',
+    name: '10以内减法练习',
+    grade: 'grade1',
+    operationTypes: ['subtraction'],
+    numberRange: { min: 1, max: 10 },
+    problemsPerPage: 60,
+    title: '一年级10以内减法练习'
+  },
+  {
+    id: 'grade1-add-sub-10',
+    name: '10以内加减混合',
+    grade: 'grade1',
+    operationTypes: ['addition', 'subtraction'],
+    numberRange: { min: 1, max: 10 },
+    problemsPerPage: 60,
+    title: '一年级10以内加减法练习'
+  },
+  {
+    id: 'grade1-add-sub-20',
+    name: '20以内加减法',
+    grade: 'grade1',
+    operationTypes: ['addition', 'subtraction'],
+    numberRange: { min: 1, max: 20 },
+    problemsPerPage: 48,
+    title: '一年级20以内加减法练习'
+  },
+  {
+    id: 'grade1-add-sub-100',
+    name: '100以内加减法',
+    grade: 'grade1',
+    operationTypes: ['addition', 'subtraction'],
+    numberRange: { min: 1, max: 100 },
+    problemsPerPage: 40,
+    title: '一年级100以内加减法练习'
+  },
+
+  // 二年级模板
+  {
+    id: 'grade2-add-sub-20',
+    name: '20以内加减混合',
+    grade: 'grade2',
+    operationTypes: ['addition', 'subtraction'],
+    numberRange: { min: 1, max: 20 },
+    problemsPerPage: 60,
+    title: '二年级20以内加减混合练习'
+  },
+  {
+    id: 'grade2-add-sub-100',
+    name: '100以内加减法',
+    grade: 'grade2',
+    operationTypes: ['addition', 'subtraction'],
+    numberRange: { min: 1, max: 100 },
+    problemsPerPage: 48,
+    title: '二年级100以内加减法练习'
+  },
+  {
+    id: 'grade2-mult-table-2-5',
+    name: '乘法口诀(2-5)',
+    grade: 'grade2',
+    operationTypes: ['multiplication'],
+    numberRange: { min: 2, max: 5 },
+    problemsPerPage: 60,
+    title: '二年级乘法口诀练习(2-5)'
+  },
+  {
+    id: 'grade2-mult-table-6-9',
+    name: '乘法口诀(6-9)',
+    grade: 'grade2',
+    operationTypes: ['multiplication'],
+    numberRange: { min: 6, max: 9 },
+    problemsPerPage: 60,
+    title: '二年级乘法口诀练习(6-9)'
+  },
+  {
+    id: 'grade2-mult-table-all',
+    name: '乘法口诀综合',
+    grade: 'grade2',
+    operationTypes: ['multiplication'],
+    numberRange: { min: 1, max: 9 },
+    problemsPerPage: 60,
+    title: '二年级乘法口诀综合练习'
+  },
+  {
+    id: 'grade2-easy-div',
+    name: '简单除法练习',
+    grade: 'grade2',
+    operationTypes: ['division'],
+    numberRange: { min: 1, max: 9 },
+    problemsPerPage: 48,
+    title: '二年级简单除法练习'
+  },
+  {
+    id: 'grade2-comprehensive',
+    name: '综合练习',
+    grade: 'grade2',
+    operationTypes: ['addition', 'subtraction', 'multiplication'],
+    numberRange: { min: 1, max: 50 },
+    problemsPerPage: 48,
+    title: '二年级数学综合练习'
+  },
+
+  // 三年级模板
+  {
+    id: 'grade3-mult-div-basic',
+    name: '乘除法基础练习',
+    grade: 'grade3',
+    operationTypes: ['multiplication', 'division'],
+    numberRange: { min: 1, max: 100 },
+    problemsPerPage: 48,
+    title: '三年级乘除法基础练习'
+  },
+  {
+    id: 'grade3-four-operations',
+    name: '四则运算混合',
+    grade: 'grade3',
+    operationTypes: ['addition', 'subtraction', 'multiplication', 'division'],
+    numberRange: { min: 1, max: 100 },
+    problemsPerPage: 40,
+    title: '三年级四则运算混合练习'
+  },
+  {
+    id: 'grade3-multi-digit',
+    name: '多位数运算',
+    grade: 'grade3',
+    operationTypes: ['addition', 'subtraction', 'multiplication'],
+    numberRange: { min: 10, max: 1000 },
+    problemsPerPage: 36,
+    title: '三年级多位数运算练习'
+  },
+
+  // 四年级模板
+  {
+    id: 'grade4-large-numbers',
+    name: '大数运算',
+    grade: 'grade4',
+    operationTypes: ['addition', 'subtraction', 'multiplication', 'division'],
+    numberRange: { min: 100, max: 10000 },
+    problemsPerPage: 32,
+    title: '四年级大数运算练习'
+  },
+  {
+    id: 'grade4-multi-digit-mult',
+    name: '多位数乘法',
+    grade: 'grade4',
+    operationTypes: ['multiplication'],
+    numberRange: { min: 10, max: 999 },
+    problemsPerPage: 24,
+    title: '四年级多位数乘法练习'
+  },
+  {
+    id: 'grade4-multi-digit-div',
+    name: '多位数除法',
+    grade: 'grade4',
+    operationTypes: ['division'],
+    numberRange: { min: 10, max: 999 },
+    problemsPerPage: 24,
+    title: '四年级多位数除法练习'
+  },
+  {
+    id: 'grade4-comprehensive',
+    name: '四则运算综合',
+    grade: 'grade4',
+    operationTypes: ['addition', 'subtraction', 'multiplication', 'division'],
+    numberRange: { min: 1, max: 1000 },
+    problemsPerPage: 30,
+    title: '四年级四则运算综合练习'
+  },
+
+  // 五年级模板
+  {
+    id: 'grade5-integer-review',
+    name: '整数运算复习',
+    grade: 'grade5',
+    operationTypes: ['addition', 'subtraction', 'multiplication', 'division'],
+    numberRange: { min: 1, max: 10000 },
+    problemsPerPage: 28,
+    title: '五年级整数运算复习'
+  },
+  {
+    id: 'grade5-complex-calc',
+    name: '复杂计算练习',
+    grade: 'grade5',
+    operationTypes: ['multiplication', 'division'],
+    numberRange: { min: 10, max: 10000 },
+    problemsPerPage: 24,
+    title: '五年级复杂计算练习'
+  },
+  {
+    id: 'grade5-mixed-advanced',
+    name: '混合运算提高',
+    grade: 'grade5',
+    operationTypes: ['addition', 'subtraction', 'multiplication', 'division'],
+    numberRange: { min: 1, max: 5000 },
+    problemsPerPage: 20,
+    title: '五年级混合运算提高练习'
+  },
+
+  // 六年级模板
+  {
+    id: 'grade6-comprehensive',
+    name: '综合运算练习',
+    grade: 'grade6',
+    operationTypes: ['addition', 'subtraction', 'multiplication', 'division'],
+    numberRange: { min: 1, max: 10000 },
+    problemsPerPage: 24,
+    title: '六年级综合运算练习'
+  },
+  {
+    id: 'grade6-advanced-calc',
+    name: '高级计算练习',
+    grade: 'grade6',
+    operationTypes: ['multiplication', 'division'],
+    numberRange: { min: 100, max: 50000 },
+    problemsPerPage: 20,
+    title: '六年级高级计算练习'
+  },
+  {
+    id: 'grade6-graduation-prep',
+    name: '毕业复习练习',
+    grade: 'grade6',
+    operationTypes: ['addition', 'subtraction', 'multiplication', 'division'],
+    numberRange: { min: 1, max: 20000 },
+    problemsPerPage: 25,
+    title: '六年级毕业复习练习'
+  }
+]
 
 export default function PrintableWorksheet() {
   const [settings, setSettings] = useState<PrintableSettings>(getDefaultPrintableSettings())
   const [pages, setPages] = useState<PrintablePage[]>([])
   const [showPreview, setShowPreview] = useState(false)
+  const [selectedGrade, setSelectedGrade] = useState<Grade>('grade2')
+  const [selectedPreset, setSelectedPreset] = useState<string>('custom')
   const printableRef = useRef<HTMLDivElement>(null)
 
   const handleGenerate = () => {
@@ -22,9 +276,7 @@ export default function PrintableWorksheet() {
     setShowPreview(true)
   }
 
-  const handlePrint = () => {
-    window.print()
-  }
+
 
   const handleDownloadPDF = async () => {
     if (!printableRef.current) return;
@@ -90,6 +342,49 @@ export default function PrintableWorksheet() {
     }))
   }
 
+  const handleGradeChange = (grade: Grade) => {
+    setSelectedGrade(grade)
+    setSelectedPreset('custom') // 切换年级时重置为自定义
+  }
+
+  const handlePresetChange = (presetId: string) => {
+    setSelectedPreset(presetId)
+    if (presetId === 'custom') return // 如果选择"自定义"，不更新设置
+    
+    const preset = presetTemplates.find(p => p.id === presetId)
+    if (preset) {
+      setSettings({
+        operationTypes: preset.operationTypes,
+        problemsPerPage: preset.problemsPerPage,
+        pageCount: 1,
+        numberRange: preset.numberRange,
+        title: preset.title,
+        showAnswers: false
+      })
+    }
+  }
+
+  // 根据选择的年级过滤预设模板
+  const filteredPresetTemplates = presetTemplates.filter(template => template.grade === selectedGrade)
+
+  const handleOperationTypeChange = (operationType: string, checked: boolean) => {
+    setSettings(prev => {
+      const newOperationTypes = checked 
+        ? [...prev.operationTypes, operationType as any]
+        : prev.operationTypes.filter(type => type !== operationType)
+      
+      // 确保至少选择一种运算类型
+      if (newOperationTypes.length === 0) {
+        return prev
+      }
+      
+      return {
+        ...prev,
+        operationTypes: newOperationTypes
+      }
+    })
+  }
+
   if (showPreview && pages.length > 0) {
     return (
       <div className="space-y-4">
@@ -97,10 +392,6 @@ export default function PrintableWorksheet() {
         <div className="flex gap-2 print:hidden">
           <Button onClick={() => setShowPreview(false)} variant="outline">
             ← 返回设置
-          </Button>
-          <Button onClick={handlePrint} className="flex items-center gap-2" variant="outline">
-            <Printer className="w-4 h-4" />
-            浏览器打印
           </Button>
           <Button onClick={handleDownloadPDF} className="flex items-center gap-2">
             <Download className="w-4 h-4" />
@@ -380,37 +671,110 @@ export default function PrintableWorksheet() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Printer className="w-5 h-5" />
+          <Download className="w-5 h-5" />
           可打印习题生成器
         </CardTitle>
         <CardDescription>
           生成适合打印的A4格式数学练习题
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
-        {/* 运算类型选择 */}
-        <div className="space-y-2">
-          <Label htmlFor="operation">运算类型</Label>
-          <Select
-            value={settings.operationType}
-            onValueChange={(value) => updateSettings('operationType', value)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="选择运算类型" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="multiplication">乘法 (×)</SelectItem>
-              <SelectItem value="addition">加法 (+)</SelectItem>
-              <SelectItem value="subtraction">减法 (-)</SelectItem>
-              <SelectItem value="division">除法 (÷)</SelectItem>
-            </SelectContent>
-          </Select>
+      <CardContent className="space-y-2.5">
+        {/* 年级选择和预设模板 - 两列布局 */}
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <Label htmlFor="grade" className="text-xs text-gray-600 mb-1 block">年级</Label>
+            <Select
+              value={selectedGrade}
+              onValueChange={handleGradeChange}
+            >
+              <SelectTrigger className="h-8 text-sm">
+                <SelectValue placeholder="选择年级" />
+              </SelectTrigger>
+              <SelectContent>
+                 {gradeOptions.map(grade => (
+                   <SelectItem key={grade.value} value={grade.value}>
+                     {grade.label}
+                   </SelectItem>
+                 ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="preset" className="text-xs text-gray-600 mb-1 block">预设模板</Label>
+            <Select
+              value={selectedPreset}
+              onValueChange={handlePresetChange}
+            >
+              <SelectTrigger className="h-8 text-sm">
+                <SelectValue placeholder="选择预设模板或自定义" />
+              </SelectTrigger>
+              <SelectContent>
+                 <SelectItem value="custom">自定义设置</SelectItem>
+                 {filteredPresetTemplates.map(template => (
+                  <SelectItem key={template.id} value={template.id}>
+                    {template.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
-        {/* 数字范围设置 */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="min-range">最小值</Label>
+        {/* 运算类型 - 多选框 */}
+        <div>
+          <Label className="text-xs text-gray-600 mb-2 block">运算类型（可多选）</Label>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="addition"
+                checked={settings.operationTypes.includes('addition')}
+                onCheckedChange={(checked) => handleOperationTypeChange('addition', checked as boolean)}
+              />
+              <Label htmlFor="addition" className="text-sm cursor-pointer">加法 (+)</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="subtraction"
+                checked={settings.operationTypes.includes('subtraction')}
+                onCheckedChange={(checked) => handleOperationTypeChange('subtraction', checked as boolean)}
+              />
+              <Label htmlFor="subtraction" className="text-sm cursor-pointer">减法 (-)</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="multiplication"
+                checked={settings.operationTypes.includes('multiplication')}
+                onCheckedChange={(checked) => handleOperationTypeChange('multiplication', checked as boolean)}
+              />
+              <Label htmlFor="multiplication" className="text-sm cursor-pointer">乘法 (×)</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="division"
+                checked={settings.operationTypes.includes('division')}
+                onCheckedChange={(checked) => handleOperationTypeChange('division', checked as boolean)}
+              />
+              <Label htmlFor="division" className="text-sm cursor-pointer">除法 (÷)</Label>
+            </div>
+          </div>
+        </div>
+
+        {/* 习题标题 */}
+        <div>
+          <Label htmlFor="title" className="text-xs text-gray-600 mb-1 block">习题标题</Label>
+          <Input
+            id="title"
+            value={settings.title || ''}
+            onChange={(e) => updateSettings('title', e.target.value)}
+            placeholder="例如：三年级乘法练习"
+            className="h-8 text-sm"
+          />
+        </div>
+
+        {/* 数字范围和题目设置 - 四列布局 */}
+        <div className="grid grid-cols-4 gap-2">
+          <div>
+            <Label htmlFor="min-range" className="text-xs text-gray-600 mb-1 block">最小值</Label>
             <Input
               id="min-range"
               type="number"
@@ -418,10 +782,11 @@ export default function PrintableWorksheet() {
               onChange={(e) => updateNumberRange('min', parseInt(e.target.value) || 1)}
               min="1"
               max="100"
+              className="h-8 text-sm"
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="max-range">最大值</Label>
+          <div>
+            <Label htmlFor="max-range" className="text-xs text-gray-600 mb-1 block">最大值</Label>
             <Input
               id="max-range"
               type="number"
@@ -429,14 +794,11 @@ export default function PrintableWorksheet() {
               onChange={(e) => updateNumberRange('max', parseInt(e.target.value) || 9)}
               min="1"
               max="100"
+              className="h-8 text-sm"
             />
           </div>
-        </div>
-
-        {/* 题目设置 */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="problems-per-page">每页题目数</Label>
+          <div>
+            <Label htmlFor="problems-per-page" className="text-xs text-gray-600 mb-1 block">每页题数</Label>
             <Input
               id="problems-per-page"
               type="number"
@@ -444,10 +806,11 @@ export default function PrintableWorksheet() {
               onChange={(e) => updateSettings('problemsPerPage', parseInt(e.target.value) || 72)}
               min="20"
               max="120"
+              className="h-8 text-sm"
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="page-count">页数</Label>
+          <div>
+            <Label htmlFor="page-count" className="text-xs text-gray-600 mb-1 block">页数</Label>
             <Input
               id="page-count"
               type="number"
@@ -455,41 +818,33 @@ export default function PrintableWorksheet() {
               onChange={(e) => updateSettings('pageCount', parseInt(e.target.value) || 1)}
               min="1"
               max="10"
+              className="h-8 text-sm"
             />
           </div>
         </div>
 
-        {/* 标题设置 */}
-        <div className="space-y-2">
-          <Label htmlFor="title">习题标题</Label>
-          <Input
-            id="title"
-            value={settings.title || ''}
-            onChange={(e) => updateSettings('title', e.target.value)}
-            placeholder="例如：三年级乘法练习"
-          />
-        </div>
-
-        {/* 预览信息 */}
-        <div className="bg-blue-50 p-4 rounded-lg">
-          <h4 className="font-semibold text-blue-800 mb-2">预览信息</h4>
-          <div className="text-sm text-blue-700 space-y-1">
-            <p>运算类型: {
-              settings.operationType === 'multiplication' ? '乘法' :
-              settings.operationType === 'addition' ? '加法' :
-              settings.operationType === 'subtraction' ? '减法' : '除法'
-            }</p>
-            <p>数字范围: {settings.numberRange.min} - {settings.numberRange.max}</p>
-            <p>总题目数: {settings.problemsPerPage * settings.pageCount} 道题</p>
-            <p>页数: {settings.pageCount} 页</p>
+        {/* 预览信息和生成按钮 - 组合布局 */}
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-2.5 rounded-lg border border-blue-100">
+          <div className="flex items-center justify-between">
+            <div className="text-blue-700 text-xs flex flex-wrap gap-x-2.5 gap-y-0.5">
+               <span className="font-medium">
+                 {settings.operationTypes.length === 0 ? '未选择' :
+                  settings.operationTypes.length === 1 ? 
+                    (settings.operationTypes[0] === 'multiplication' ? '乘法' :
+                     settings.operationTypes[0] === 'addition' ? '加法' :
+                     settings.operationTypes[0] === 'subtraction' ? '减法' : '除法') :
+                  '混合运算'}
+               </span>
+               <span>{settings.numberRange.min}-{settings.numberRange.max}</span>
+               <span>{settings.problemsPerPage * settings.pageCount}题</span>
+               <span>{settings.pageCount}页</span>
+             </div>
+            <Button onClick={handleGenerate} size="sm" className="h-7 text-xs px-3 ml-3">
+              <Eye className="w-3 h-3 mr-1" />
+              生成预览
+            </Button>
           </div>
         </div>
-
-        {/* 生成按钮 */}
-        <Button onClick={handleGenerate} size="lg" className="w-full">
-          <Eye className="w-4 h-4 mr-2" />
-          生成并预览习题
-        </Button>
       </CardContent>
     </Card>
   )

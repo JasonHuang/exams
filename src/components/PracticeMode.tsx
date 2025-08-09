@@ -36,7 +36,14 @@ export default function PracticeMode() {
   const submitAnswer = () => {
     if (!currentProblem || userAnswer === '') return
 
-    const answer = parseInt(userAnswer)
+    const answer = parseInt(userAnswer, 10)
+    
+    // 检查 parseInt 是否返回有效数字
+    if (isNaN(answer)) {
+      console.log('用户输入无效:', userAnswer)
+      return
+    }
+    
     const isCorrect = answer === currentProblem.answer
     
     if (isCorrect) {
@@ -50,6 +57,8 @@ export default function PracticeMode() {
       isCorrect
     }
 
+    // 更新当前题目状态
+    setCurrentProblem(updatedProblem)
     setShowResult(true)
     
     // 2秒后显示下一题
@@ -145,7 +154,7 @@ export default function PracticeMode() {
                   value={userAnswer}
                   onChange={(e) => setUserAnswer(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  className="answer-input w-32 h-12 border-2 border-gray-300 rounded-lg"
+                  className="answer-input w-32 h-12 border-2 border-gray-300 rounded-lg text-center text-lg"
                   placeholder="答案"
                   autoFocus
                 />

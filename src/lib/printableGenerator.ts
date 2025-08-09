@@ -18,7 +18,16 @@ function getOperationSymbol(operation: string): string {
 
 // 生成单个题目
 function generatePrintableProblem(settings: PrintableSettings): PrintableProblem {
-  const { operationType, numberRange } = settings
+  const { operationTypes, numberRange } = settings
+  
+  // 如果没有选择运算类型，默认使用加法
+  const validOperationTypes = (!operationTypes || operationTypes.length === 0) 
+    ? ['addition'] 
+    : operationTypes
+  
+  // 随机选择一个运算类型
+  const operationType = validOperationTypes[Math.floor(Math.random() * validOperationTypes.length)]
+  
   let operand1: number, operand2: number, answer: number
 
   switch (operationType) {
@@ -80,7 +89,18 @@ export function generatePrintablePages(settings: PrintableSettings): PrintablePa
       division: '除法'
     }
     
-    const title = settings.title || `${operationNames[settings.operationType]}练习题`
+    // 生成标题，如果是多种运算类型，显示"混合运算"
+    let defaultTitle = '数学练习题'
+    if (settings.operationTypes && settings.operationTypes.length > 0) {
+      if (settings.operationTypes.length === 1) {
+        defaultTitle = `${operationNames[settings.operationTypes[0]]}练习题`
+      } else {
+        const typeNames = settings.operationTypes.map(type => operationNames[type]).join('、')
+        defaultTitle = `${typeNames}混合练习题`
+      }
+    }
+    
+    const title = settings.title || defaultTitle
     
     pages.push({
       pageNumber: pageNum,
@@ -95,7 +115,7 @@ export function generatePrintablePages(settings: PrintableSettings): PrintablePa
 // 获取默认设置
 export function getDefaultPrintableSettings(): PrintableSettings {
   return {
-    operationType: 'multiplication',
+    operationTypes: ['multiplication'],
     problemsPerPage: 72,
     pageCount: 1,
     numberRange: { min: 1, max: 9 },
